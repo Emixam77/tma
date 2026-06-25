@@ -97,6 +97,11 @@ function App() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]); // indices of selected options
 
+  // Récupération de l'ID utilisateur Telegram via le SDK WebApp
+  const tgUserId = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+  const baseStripeUrl = "https://buy.stripe.com/28EfZgch01Ku2z6fZi18c0g";
+  const checkoutUrl = tgUserId ? `${baseStripeUrl}?client_reference_id=${tgUserId}` : baseStripeUrl;
+
   const handleStart = () => {
     setAnswers([]);
     setCurrentQuestionIndex(0);
@@ -460,7 +465,7 @@ function App() {
                 </div>
 
                 <a 
-                  href="https://buy.stripe.com/28EfZgch01Ku2z6fZi18c0g"
+                  href={checkoutUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl p-4 flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_25px_rgba(168,85,247,0.4)] cursor-pointer text-sm"
