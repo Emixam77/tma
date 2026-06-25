@@ -1,0 +1,183 @@
+{
+  "name": "Le Gardien VIP - Stripe & Telegram Protection",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-webhook",
+        "options": {}
+      },
+      "id": "e4a29a1b-7a1a-464a-8d14-38605df94770",
+      "name": "Stripe Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "value1": "={{ $json.body.type }}",
+              "value2": "checkout.session.completed"
+            },
+            {
+              "value1": "={{ $json.body.type }}",
+              "value2": "customer.subscription.deleted",
+              "output": 1
+            },
+            {
+              "value1": "={{ $json.body.type }}",
+              "value2": "invoice.payment_failed",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "id": "c1f72b9a-4c28-498c-8f15-081e64bf8cd0",
+      "name": "Switch Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        480,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('Stripe Webhook').item.json.body.data.object.metadata.bot_token || 'TON_BOT_TOKEN_ICI' }}/createChatInviteLink",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('Stripe Webhook').item.json.body.data.object.metadata.chat_id || 'TON_CHAT_ID_ICI' }}\",\n  \"member_limit\": 1,\n  \"name\": \"Lien VIP unique - {{ $('Stripe Webhook').item.json.body.data.object.customer }}\"\n}",
+        "options": {}
+      },
+      "id": "7fa120db-9b62-4fc4-8d48-cb54ab5ff958",
+      "name": "Telegram - Create Invite Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        720,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('Stripe Webhook').item.json.body.data.object.metadata.bot_token || 'TON_BOT_TOKEN_ICI' }}/banChatMember",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('Stripe Webhook').item.json.body.data.object.metadata.chat_id || 'TON_CHAT_ID_ICI' }}\",\n  \"user_id\": \"{{ $('Stripe Webhook').item.json.body.data.object.metadata.telegram_user_id || 'USER_ID_A_KICKER' }}\"\n}",
+        "options": {}
+      },
+      "id": "2fa03d8b-b184-4860-93a8-4c12bb94aa7d",
+      "name": "Telegram - Ban Member",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        720,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('Stripe Webhook').item.json.body.data.object.metadata.bot_token || 'TON_BOT_TOKEN_ICI' }}/unbanChatMember",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('Stripe Webhook').item.json.body.data.object.metadata.chat_id || 'TON_CHAT_ID_ICI' }}\",\n  \"user_id\": \"{{ $('Stripe Webhook').item.json.body.data.object.metadata.telegram_user_id || 'USER_ID_A_KICKER' }}\",\n  \"only_if_banned\": true\n}",
+        "options": {}
+      },
+      "id": "9ca128ef-e23a-4db3-987a-b51f0c29f4ad",
+      "name": "Telegram - Unban (pour re-join futur)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('Stripe Webhook').item.json.body.data.object.metadata.bot_token || 'TON_BOT_TOKEN_ICI' }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('Stripe Webhook').item.json.body.data.object.metadata.chat_id || 'TON_CHAT_ID_ICI' }}\",\n  \"text\": \"ℹ️ Un lien d'accès VIP unique a été créé !\\n\\nLien : {{ $json.body.result.invite_link }}\",\n  \"protect_content\": true\n}",
+        "options": {}
+      },
+      "id": "3fa05d8c-c234-4bc2-96aa-cb123df948ab",
+      "name": "Telegram - Send Link Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Stripe Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Event Type": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Create Invite Link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram - Ban Member",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - Create Invite Link": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Send Link Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - Ban Member": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Unban (pour re-join futur)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": ""
+  },
+  "pinData": {}
+}
